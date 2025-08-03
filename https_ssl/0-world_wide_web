@@ -4,21 +4,43 @@
 function get_sub_info {
   local domain=$1
   local subdomain=$2
+  
+  # Check if domain is empty
+  if [[ -z "$domain" ]]; then
+    echo "Error: Domain is required"
+    return 1
+  fi
+  
   local full_domain="${subdomain}.${domain}"
   local record_info=$(dig +noall +answer ${full_domain} | awk '{print $4, $5}')
   local record_type=$(echo $record_info | awk '{print $1}')
   local record_ip=$(echo $record_info | awk '{print $2}')
-
-  echo "The subdomain ${subdomain} is a ${record_type} record and points to ${record_ip}"
+  
+  # Check if we got valid results
+  if [[ -n "$record_type" && -n "$record_ip" ]]; then
+    echo "The subdomain ${subdomain} is a ${record_type} record and points to ${record_ip}"
+  else
+    echo "The subdomain ${subdomain} has no DNS record"
+  fi
 }
+
+# Check if at least domain argument is provided
+if [[ $# -eq 0 ]]; then
+  echo "Usage: $0 <domain> [subdomain]"
+  echo "Example: $0 example.com"
+  echo "Example: $0 example.com www"
+  exit 1
+fi
 
 domain=$1
 subdomain=$2
 
 if [[ -z "$subdomain" ]]; then
+  # If no specific subdomain provided, check all default ones
   for sub in www lb-01 web-01 web-02; do
-    get_sub_info $domain $sub
+    get_sub_info "$domain" "$sub"
   done
 else
-  get_sub_info $domain $subdomain
+  # Check specific subdomain
+  get_sub_info "$domain" "$subdomain"
 fi
